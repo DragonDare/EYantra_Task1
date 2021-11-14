@@ -51,7 +51,7 @@ defmodule ToyRobot do
   Provide START position to the robot as given location of (x, y, facing) and place it.
   """
   def start(x, y, facing) do
-    {:ok, %ToyRobot.Position{x: x, y: y, facing: facing}}
+    place(x,y,facing)
   end
 
   def stop(_robot, goal_x, goal_y, _cli_proc_name) when goal_x < 1 or goal_y < :a or goal_x > @table_top_x or goal_y > @table_top_y do
@@ -64,42 +64,70 @@ defmodule ToyRobot do
   """
   def stop(robot, goal_x, goal_y, cli_proc_name) do
     %ToyRobot.Position{x: x, y: y, facing: facing} = robot
-    IO.puts("#{x} #{y} #{facing}")
 
     defmodule Loop do
-      @robot_map_y_atom_to_num %{:a => 1, :b => 2, :c => 3, :d => 4, :e => 5}
 
-      def move_up(y,goal_y,robot,_move) when y==goal_y do
+      def move_v(y,goal_y,robot,_move,send_robot_status,cli_proc_name) when y==goal_y do
+        send_robot_status.(robot,cli_proc_name)
         robot
       end
-      def move_up(y,goal_y,robot,move) do
+
+      def move_v(_y,goal_y,robot,move,send_robot_status,cli_proc_name) do
+        send_robot_status.(robot,cli_proc_name)
         robot=move.(robot)
-        y=Enum.find(@robot_map_y_atom_to_num, fn {_, val} -> val == Map.get(@robot_map_y_atom_to_num, y) + 1 end) |>elem(0)
-        IO.puts("#{y}")
-        move_up(y,goal_y,robot,move)
+        %ToyRobot.Position{x: _x, y: y, facing: _facing} = robot
+        move_v(y,goal_y,robot,move,send_robot_status,cli_proc_name)
+      end
+
+      def move_h(x,goal_x,robot,_move,send_robot_status,cli_proc_name) when x==goal_x do
+        send_robot_status.(robot,cli_proc_name)
+        robot
+      end
+
+      def move_h(_x,goal_x,robot,move,send_robot_status,cli_proc_name) do
+        send_robot_status.(robot,cli_proc_name)
+        robot=move.(robot)
+        %ToyRobot.Position{x: x, y: _y, facing: _facing} = robot
+        move_h(x,goal_x,robot,move,send_robot_status,cli_proc_name)
       end
     end
 
-    robot=Loop.move_up(y,goal_y,robot,&ToyRobot.move/1)
-    flag=0
-    cond do
-      goal_x>x ->
-        flag=1
-        robot=right(robot)
-      goal_x<x ->
-        robot=left(robot)
-      true ->
-        IO.puts("Reached!")
-    end
-    IO.puts("#{flag}")
+    robot=face(robot,y,goal_y)
 
-    # Enum.each(x..goal_x,fn(number)->robot=move(robot)end)
+    robot=Loop.move_v(y,goal_y,robot,&ToyRobot.move/1,&ToyRobot.send_robot_status/2,cli_proc_name)
+    %ToyRobot.Position{x: x, y: y, facing: facing} = robot
 
-    #IO.puts("#{robot}")
+    robot=turn(robot,x,goal_x,facing)
+    %ToyRobot.Position{x: x, y: y, facing: facing} = robot
 
+    robot=Loop.move_h(x,goal_x,robot,&ToyRobot.move/1,&ToyRobot.send_robot_status/2,cli_proc_name)
     %ToyRobot.Position{facing: facing, x: x, y: y} = robot
-    IO.puts("#{x} #{y} #{facing}")
+
     {:ok,robot}
+  end
+
+  def face(robot,y,goal_y) when goal_y<y do
+    %ToyRobot.Position{robot | facing: :south}
+  end
+
+  def face(robot,y,goal_y) when goal_y>y do
+    %ToyRobot.Position{robot | facing: :north}
+  end
+
+  def turn(robot,x,goal_x,facing) when goal_x<x and facing==:north do
+    left(robot)
+  end
+
+  def turn(robot,x,goal_x,facing) when goal_x>x and facing==:north do
+    right(robot)
+  end
+
+  def turn(robot,x,goal_x,facing) when goal_x<x and facing==:south do
+    right(robot)
+  end
+
+  def turn(robot,x,goal_x,facing) when goal_x>x and facing==:south do
+    left(robot)
   end
 
   @doc """
