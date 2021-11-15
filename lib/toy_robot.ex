@@ -65,45 +65,42 @@ defmodule ToyRobot do
   def stop(robot, goal_x, goal_y, cli_proc_name) do
     %ToyRobot.Position{x: x, y: y, facing: facing} = robot
 
-    defmodule Loop do
-
-      def move_v(y,goal_y,robot,_move,send_robot_status,cli_proc_name) when y==goal_y do
-        send_robot_status.(robot,cli_proc_name)
-        robot
-      end
-
-      def move_v(_y,goal_y,robot,move,send_robot_status,cli_proc_name) do
-        send_robot_status.(robot,cli_proc_name)
-        robot=move.(robot)
-        %ToyRobot.Position{x: _x, y: y, facing: _facing} = robot
-        move_v(y,goal_y,robot,move,send_robot_status,cli_proc_name)
-      end
-
-      def move_h(x,goal_x,robot,_move,send_robot_status,cli_proc_name) when x==goal_x do
-        send_robot_status.(robot,cli_proc_name)
-        robot
-      end
-
-      def move_h(_x,goal_x,robot,move,send_robot_status,cli_proc_name) do
-        send_robot_status.(robot,cli_proc_name)
-        robot=move.(robot)
-        %ToyRobot.Position{x: x, y: _y, facing: _facing} = robot
-        move_h(x,goal_x,robot,move,send_robot_status,cli_proc_name)
-      end
-    end
-
     robot=face(robot,y,goal_y)
 
-    robot=Loop.move_v(y,goal_y,robot,&ToyRobot.move/1,&ToyRobot.send_robot_status/2,cli_proc_name)
+    robot=move_v(y,goal_y,robot,cli_proc_name)
     %ToyRobot.Position{x: x, y: y, facing: facing} = robot
 
     robot=turn(robot,x,goal_x,facing)
     %ToyRobot.Position{x: x, y: y, facing: facing} = robot
 
-    robot=Loop.move_h(x,goal_x,robot,&ToyRobot.move/1,&ToyRobot.send_robot_status/2,cli_proc_name)
+    robot=move_h(x,goal_x,robot,cli_proc_name)
     %ToyRobot.Position{facing: facing, x: x, y: y} = robot
 
     {:ok,robot}
+  end
+
+  def move_v(y,goal_y,robot,cli_proc_name) when y==goal_y do
+    send_robot_status(robot,cli_proc_name)
+    robot
+  end
+
+  def move_v(_y,goal_y,robot,cli_proc_name) do
+    send_robot_status(robot,cli_proc_name)
+    robot=move(robot)
+    %ToyRobot.Position{x: _x, y: y, facing: _facing} = robot
+    move_v(y,goal_y,robot,cli_proc_name)
+  end
+
+  def move_h(x,goal_x,robot,cli_proc_name) when x==goal_x do
+    send_robot_status(robot,cli_proc_name)
+    robot
+  end
+
+  def move_h(_x,goal_x,robot,cli_proc_name) do
+    send_robot_status(robot,cli_proc_name)
+    robot=move(robot)
+    %ToyRobot.Position{x: x, y: _y, facing: _facing} = robot
+    move_h(x,goal_x,robot,cli_proc_name)
   end
 
   def face(robot,y,goal_y) when goal_y<y do
